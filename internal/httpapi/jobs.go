@@ -101,7 +101,11 @@ func (a API) compare(w http.ResponseWriter, r *http.Request) {
 	write(w, 200, v)
 }
 func (a API) status(w http.ResponseWriter, r *http.Request) {
-	write(w, 200, observe.Summary(a.Service.Store.Read()))
+	out := observe.Summary(a.Service.Store.Read())
+	out["writer"] = a.Service.Store.Writer()
+	out["generation"] = a.Service.Store.Generation()
+	out["adoptedBy"] = a.Service.Store.AdoptedBy()
+	write(w, 200, out)
 }
 func (a API) events(w http.ResponseWriter, r *http.Request) {
 	write(w, 200, a.Service.Store.Read().Events)

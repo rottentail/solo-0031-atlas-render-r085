@@ -22,6 +22,24 @@ type Worker struct {
 func New(st *persist.Store) *Worker {
 	return &Worker{store: st, active: map[string]context.CancelFunc{}}
 }
+
+// Watch polls ownership so a process that loses the state to another writer
+// stops its rendering loop even when no HTTP requests arrive. It returns the
+// fencing error so the caller can cancel the worker context.
+func (w *Worker) Watch(ctx context.Context, interval time.Duration) error {
+	tick := time.NewTicker(interval)
+	defer tick.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-tick.C:
+			if e := w.store.VerifyOwnership(); e != nil {
+				return e
+			}
+		}
+	}
+}
 func (w *Worker) Recover() error {
 	return w.store.Update(func(s *model.State) error {
 		for id, j := range s.Jobs {
@@ -117,8 +135,13 @@ func (w *Worker) step(parent context.Context) error {
 			data, e = codec.Encode(img)
 		}
 	}
+	// A stopped or superseded process must not commit a result; the next owner
+	// recovers the running job from its pinned input instead.
 	if parent.Err() != nil {
 		return nil
+	}
+	if e = w.store.Fenced(); e != nil {
+		return e
 	}
 	return w.store.Update(func(s *model.State) error {
 		v := s.Jobs[j.ID]

@@ -11,6 +11,12 @@ func Validate(s model.State) error {
 	if s.Version != model.FormatVersion {
 		return fmt.Errorf("unsupported state version %d", s.Version)
 	}
+	if s.Generation < 1 {
+		return fmt.Errorf("state generation must be positive")
+	}
+	if s.Writer == "" {
+		return fmt.Errorf("state writer identity missing")
+	}
 	if s.Scenes == nil || s.Assets == nil || s.Snapshots == nil || s.Jobs == nil || s.Artifacts == nil || s.Receipts == nil {
 		return fmt.Errorf("state maps must be present")
 	}

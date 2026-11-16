@@ -71,12 +71,17 @@
     {
       "workflow_id": "observe-service",
       "command": "python3 scripts/walkthrough.py --workflow observe-service"
+    },
+    {
+      "workflow_id": "handoff-cutover",
+      "command": "python3 scripts/handoff_drill.py"
     }
   ],
   "environment": {
     "go": ">=1.22",
     "python": ">=3.9 for walkthrough",
-    "platform": "macOS or Linux; advisory file locking required"
+    "platform": "macOS or Linux; advisory file locking required",
+    "handoff": "atlasctl manifest + generation fencing; see docs/handoff.md"
   },
   "run_command": "go run ./cmd/atlas"
 }

@@ -112,19 +112,21 @@ type Event struct {
 	At       time.Time `json:"at"`
 }
 type State struct {
-	Version   int                 `json:"version"`
-	Scenes    map[string]Scene    `json:"scenes"`
-	Assets    map[string]Asset    `json:"assets"`
-	Snapshots map[string]Snapshot `json:"snapshots"`
-	Jobs      map[string]Job      `json:"jobs"`
-	Artifacts map[string]Artifact `json:"artifacts"`
-	Receipts  map[string]Receipt  `json:"receipts"`
-	Events    []Event             `json:"events"`
-	Sequence  int                 `json:"sequence"`
+	Version    int                 `json:"version"`
+	Generation int64               `json:"generation"`
+	Writer     string              `json:"writer"`
+	Scenes     map[string]Scene    `json:"scenes"`
+	Assets     map[string]Asset    `json:"assets"`
+	Snapshots  map[string]Snapshot `json:"snapshots"`
+	Jobs       map[string]Job      `json:"jobs"`
+	Artifacts  map[string]Artifact `json:"artifacts"`
+	Receipts   map[string]Receipt  `json:"receipts"`
+	Events     []Event             `json:"events"`
+	Sequence   int                 `json:"sequence"`
 }
 
 func NewState() State {
-	return State{Version: FormatVersion, Scenes: map[string]Scene{}, Assets: map[string]Asset{}, Snapshots: map[string]Snapshot{}, Jobs: map[string]Job{}, Artifacts: map[string]Artifact{}, Receipts: map[string]Receipt{}}
+	return State{Version: FormatVersion, Generation: 1, Scenes: map[string]Scene{}, Assets: map[string]Asset{}, Snapshots: map[string]Snapshot{}, Jobs: map[string]Job{}, Artifacts: map[string]Artifact{}, Receipts: map[string]Receipt{}}
 }
 func Digest(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
 func CanonicalDigest(v any) string {

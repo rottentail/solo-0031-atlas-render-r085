@@ -42,7 +42,13 @@ func decode(w http.ResponseWriter, r *http.Request, dst any) error {
 }
 func (a API) Handler() http.Handler {
 	m := http.NewServeMux()
-	m.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { write(w, 200, map[string]string{"status": "ready"}) })
+	m.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+		if e := a.Service.Store.Fenced(); e != nil {
+			fail(w, e)
+			return
+		}
+		write(w, 200, map[string]string{"status": "ready"})
+	})
 	m.HandleFunc("PUT /v1/scenes/{id}", a.putScene)
 	m.HandleFunc("GET /v1/scenes/{id}", a.getScene)
 	m.HandleFunc("POST /v1/scenes/{id}/state", a.sceneState)
@@ -64,6 +70,13 @@ func (a API) Handler() http.Handler {
 	m.HandleFunc("GET /v1/events", a.events)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
+		// A fenced process must not answer with stale facts: a client may
+		// otherwise conclude the old host is still authoritative. Ownership is
+		// re-read on every request, so a takeover is visible immediately.
+		if e := a.Service.Store.VerifyOwnership(); e != nil {
+			fail(w, e)
+			return
+		}
 		m.ServeHTTP(w, r)
 	})
 }

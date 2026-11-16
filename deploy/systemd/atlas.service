@@ -1,0 +1,36 @@
+[Unit]
+Description=Atlas Render static composition service
+After=network.target
+# The state directory is the single source of truth. Never run this unit on two
+# hosts against the same ATLAS_STATE; use atlasctl cutover to move it instead.
+ConditionPathExistsNot=/var/lib/atlas/state.json.superseded
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=atlas
+Group=atlas
+WorkingDirectory=/opt/atlas
+Environment=ATLAS_ADDR=127.0.0.1:8763
+Environment=ATLAS_STATE=/var/lib/atlas/state.json
+Environment=ATLAS_WRITER=atlas-main
+ExecStart=/opt/atlas/atlas
+# SIGTERM drains HTTP, then records process.stopped. A task left running is
+# requeued by the next start; see docs/operations.md.
+KillSignal=SIGTERM
+KillMode=mixed
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=2
+# A superseded state must not be restarted automatically: the operator has to
+# adopt the new path deliberately.
+RestartPreventExitStatus=1
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/atlas
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

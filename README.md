@@ -11,7 +11,7 @@ go build ./...
 go run ./cmd/atlas
 ```
 
-默认监听 `127.0.0.1:8763`，状态写入 `var/atlas-state.json`。可用 `ATLAS_ADDR`、`ATLAS_STATE` 改变监听地址和状态路径。同一个状态路径只能由一个进程打开。服务启动会验证持久数据并恢复中断的执行任务。默认部署面向受信网络中的单实例生产流程。
+默认监听 `127.0.0.1:8763`，状态写入 `var/atlas-state.json`。可用 `ATLAS_ADDR`、`ATLAS_STATE` 改变监听地址和状态路径；`ATLAS_WRITER` 标识进程身份。同一个状态路径只能由一个进程打开。服务启动会验证持久数据、发布新的状态generation并恢复中断的执行任务；发现状态已被其他进程接管时，进程会以 `503 fenced` 停止服务所有路由，而不是继续返回旧事实。默认部署面向受信网络中的单实例生产流程。
 
 ## 运行真实工作流
 
@@ -26,6 +26,16 @@ python3 scripts/walkthrough.py --workflow compare-renders
 ```
 
 脚本在临时状态目录启动实际服务，通过 HTTP 完成操作后停止服务，输出任务状态和 PNG 摘要；`--out` 保存可查看的合成示例。恢复流程会强制结束脚本自己启动的服务进程，再验证恢复结果。所有工作流编号见 `.project-manifest.json`。
+
+## 主机迁移演练
+
+```sh
+go build -o atlas ./cmd/atlas
+go build -o atlasctl ./cmd/atlasctl
+python3 scripts/handoff_drill.py --keep
+```
+
+脚本用两个独立状态目录模拟两台主机，完成一次真实中断（SIGKILL）后的单写切换和回退：捕获并校验固定输入、任务承诺和已清理结果的 `factsDigest`，复制并逐字节校验目标状态，用 `state.json.superseded` fence 旧主机（删锁文件和重启均无效），在目标主机按原幂等键重放并恢复 running 任务，比较像素确认无分叉，再回退到原路径。步骤和失败处理见 `docs/handoff.md`。
 
 ## 场景到结果
 
